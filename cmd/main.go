@@ -18,20 +18,21 @@ func main() {
 	const usage = `Flag di startnewproject:
   -h, --help		stampa le informazioni di aiuto
   -l, --list		lista i template disponibili
-  -d, --dir		percorso dove creare il progetto		[Default: percorso corrente]
-  -t, --template		sceglie che template usare		[Obbligatorio]
-  --no-git		non inizializza la repository git
+  -i, --info		informazioni su un template
+  -d, --dir		percorso dove creare il progetto	[Default: percorso corrente]
+  -t, --template	sceglie che template usare		[Obbligatorio]
 	`
 	flag.Usage = func() { fmt.Print(usage) }
 
 	var path string
-	flag.StringVar(&path, "dir", cwd, "percorso dove salvare i file")
-	flag.StringVar(&path, "d", cwd, "percorso dove salvare i file")
+	flag.StringVar(&path, "dir", cwd, "percorso dove creare il progetto")
+	flag.StringVar(&path, "d", cwd, "percorso dove creare il progetto")
 	var template string
 	flag.StringVar(&template, "template", "D", "template da usare")
 	flag.StringVar(&template, "t", "D", "template da usare")
-	var git bool
-	flag.BoolVar(&git, "no-git", false, "non inizializza la repository git")
+	var info string
+	flag.StringVar(&info, "info", "D", "informazioni su un templat")
+	flag.StringVar(&info, "i", "D", "informazioni su un templat")
 	var list bool
 	flag.BoolVar(&list, "list", false, "lista i template disponibili")
 	flag.BoolVar(&list, "l", false, "lista i template disponibili")
@@ -49,7 +50,7 @@ func main() {
 		// Getting the path where to store the downloads
 		fmt.Printf("Inserisci il percorso dove creare il progetto [Vuoto per: \"%s\"]: ", path)
 		path, _ = reader.ReadString('\n')
-	} else if !noFlags() && template == "D" && !list {
+	} else if !noFlags() && template == "D" && !list && info == "D" {
 		panic("Il flag --template è obbligatorio.")
 	}
 
@@ -65,7 +66,7 @@ func main() {
 
 	if list {
 		fmt.Println("Lista dei template disponibili:")
-		templs, err := os.ReadDir("../templates")
+		templs, err := os.ReadDir(cwd + "/templates/")
 		if err != nil {
 			panic(err)
 		}
@@ -75,12 +76,46 @@ func main() {
 				fmt.Println(" - ", t.Name())
 			}
 		}
+	} else if info != "D" {
+		fmt.Println("Informazioni sul template:", info)
+		t := filepath.Join(cwd, "templates", info)
+		filepath.WalkDir(t, func(s string, d fs.DirEntry, err error) error {
+			if err != nil {
+				return err
+			}
+
+			x := strings.TrimPrefix(s, t)
+			depth := strings.Count(x, "/") + strings.Count(x, "\\") - 1
+			if x == "" {
+				return nil
+			}
+
+			if depth > 0 {
+				fmt.Print(strings.Repeat("│   ", depth-1))
+				fmt.Print("├── ")
+			}
+			if !d.IsDir() {
+				fmt.Print(d.Name())
+				if strings.HasSuffix(d.Name(), ".command") {
+					b, err := os.ReadFile(s)
+					if err != nil {
+						panic(err)
+					}
+					cmds := strings.Join(strings.Split(strings.TrimSpace(string(b)), "\n"), " && ")
+					fmt.Printf(" > %s",cmds)
+				}
+				fmt.Println()
+			} else {
+				fmt.Println(d.Name()+"/")
+			}
+			return nil 
+		})
 	} else {
-		run(path, template, git)
+		run(path, template)
 	}
 }
 
-func run(path, template string, git bool) {
+func run(path, template string) {
 	cwd, _ := os.Getwd()
 	t, err := filepath.Abs(filepath.Join(cwd + "/templates/" + template))
 	if err != nil {
@@ -100,11 +135,6 @@ func run(path, template string, git bool) {
 		}
 		return nil
 	})
-	if git {
-		if err := exec.Command("git", "init", path).Run(); err != nil {
-			panic(err)
-		}
-	}
 
 	reader := bufio.NewReader(os.Stdin)
 	filepath.WalkDir(t, func(s string, d fs.DirEntry, err error) error {
