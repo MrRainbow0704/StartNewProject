@@ -1,2 +1,2 @@
-go mod tidy
-go build -o ./bin/start-new-project.exe ./cmd
+go mod download && go mod verify
+go build -o ./bin/ ./cmd/...

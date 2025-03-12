@@ -1,4 +1,4 @@
 #!/usr/bin/env sh
 
-go mod tidy
-go build -o ./bin/main ./cmd
+go mod download && go mod verify
+go build -o ./bin/ ./cmd/...

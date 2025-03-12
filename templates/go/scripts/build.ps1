@@ -1,2 +1,2 @@
-go mod tidy
-go build -o ./bin/main.exe ./cmd
+go mod download && go mod verify
+go build -o ./bin/ ./cmd/...
