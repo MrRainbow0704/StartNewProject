@@ -8,17 +8,18 @@ import (
 	"os/exec"
 	"path/filepath"
 	"strings"
+
+	"github.com/MrRainbow0704/StartNewProject/templates"
 )
 
 func createCommand(path, template string) {
-	cwd, _ := os.Getwd()
-	t, err := filepath.Abs(filepath.Join(cwd + "/templates/" + template))
+	fmt.Println("Creazione del progetto in corso...")
+	fmt.Println("Template:", template)
+	templ, err := fs.Sub(templates.Content, template)
 	if err != nil {
 		panic(err)
 	}
-	fmt.Println("Creazione del progetto in corso...")
-	fmt.Println("Template:", template)
-	if err := os.CopyFS(path, os.DirFS(t)); err != nil {
+	if err := os.CopyFS(path, templ); err != nil {
 		panic(err)
 	}
 	filepath.WalkDir(path, func(s string, d fs.DirEntry, err error) error {
@@ -32,12 +33,12 @@ func createCommand(path, template string) {
 	})
 
 	reader := bufio.NewReader(os.Stdin)
-	filepath.WalkDir(t, func(s string, d fs.DirEntry, err error) error {
+	fs.WalkDir(templates.Content, template, func(s string, d fs.DirEntry, err error) error {
 		if err != nil {
 			return err
 		}
 		if !d.IsDir() && strings.HasSuffix(d.Name(), ".command") {
-			b, err := os.ReadFile(s)
+			b, err := templates.Content.ReadFile(s)
 			if err != nil {
 				panic(err)
 			}
@@ -48,12 +49,12 @@ func createCommand(path, template string) {
 					cmd = append(cmd, "")
 				}
 
-				fmt.Printf("Eseguendo il comando `%s`\n\tcontenuto in `%s`.\n\tContinuare? [S/n] ", strings.Join(cmd, " "), strings.TrimPrefix(s, t))
+				fmt.Printf("Eseguendo il comando `%s`\n\tcontenuto in `%s`.\n\tContinuare? [S/n] ", strings.Join(cmd, " "), s)
 				ok, _ := reader.ReadString('\n')
 				ok = strings.TrimSpace(strings.ToLower(ok))
 				if ok == "s" || ok == "y" {
 					c := exec.Command(cmd[0], cmd[1:]...)
-					c.Dir = filepath.Join(path, strings.TrimPrefix(strings.TrimSuffix(s, d.Name()), t))
+					c.Dir = filepath.Join(path, strings.TrimPrefix(strings.TrimSuffix(s, d.Name()), template))
 					c.Stderr = os.Stderr
 					c.Stdout = os.Stdout
 					c.Stdin = os.Stdin

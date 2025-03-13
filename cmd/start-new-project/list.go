@@ -2,17 +2,18 @@ package main
 
 import (
 	"fmt"
-	"os"
+
+	"github.com/MrRainbow0704/StartNewProject/templates"
 )
 
 func listCommand() {
 	fmt.Println("Lista dei template disponibili:")
-	templs, err := os.ReadDir(cwd + "/templates/")
+
+	templ, err := templates.Content.ReadDir(".")
 	if err != nil {
 		panic(err)
 	}
-
-	for _, t := range templs {
+	for _, t := range templ {
 		if t.IsDir() {
 			fmt.Println(" - ", t.Name())
 		}
